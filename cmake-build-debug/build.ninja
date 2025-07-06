@@ -57,6 +57,22 @@ build CMakeFiles/Wallpaper.dir/main.cpp.obj: CXX_COMPILER__Wallpaper_unscanned_D
   OBJECT_DIR = CMakeFiles\Wallpaper.dir
   OBJECT_FILE_DIR = CMakeFiles\Wallpaper.dir
 
+build CMakeFiles/Wallpaper.dir/Folder.cpp.obj: CXX_COMPILER__Wallpaper_unscanned_Debug D$:/ProgrammingProjects/Wallpaper/Folder.cpp || cmake_object_order_depends_target_Wallpaper
+  DEFINES = -DSFML_STATIC -DUNICODE -D_UNICODE
+  DEP_FILE = CMakeFiles\Wallpaper.dir\Folder.cpp.obj.d
+  FLAGS = -g -std=gnu++20 -fdiagnostics-color=always
+  INCLUDES = -ID:/ProgrammingProjects/Wallpaper/cmake-build-debug/_deps/fmt-src/include -ID:/ProgrammingProjects/Wallpaper/cmake-build-debug/_deps/sfml-src/include
+  OBJECT_DIR = CMakeFiles\Wallpaper.dir
+  OBJECT_FILE_DIR = CMakeFiles\Wallpaper.dir
+
+build CMakeFiles/Wallpaper.dir/DropTarget.cpp.obj: CXX_COMPILER__Wallpaper_unscanned_Debug D$:/ProgrammingProjects/Wallpaper/DropTarget.cpp || cmake_object_order_depends_target_Wallpaper
+  DEFINES = -DSFML_STATIC -DUNICODE -D_UNICODE
+  DEP_FILE = CMakeFiles\Wallpaper.dir\DropTarget.cpp.obj.d
+  FLAGS = -g -std=gnu++20 -fdiagnostics-color=always
+  INCLUDES = -ID:/ProgrammingProjects/Wallpaper/cmake-build-debug/_deps/fmt-src/include -ID:/ProgrammingProjects/Wallpaper/cmake-build-debug/_deps/sfml-src/include
+  OBJECT_DIR = CMakeFiles\Wallpaper.dir
+  OBJECT_FILE_DIR = CMakeFiles\Wallpaper.dir
+
 
 # =============================================================================
 # Link build statements for EXECUTABLE target Wallpaper
@@ -65,7 +81,7 @@ build CMakeFiles/Wallpaper.dir/main.cpp.obj: CXX_COMPILER__Wallpaper_unscanned_D
 #############################################
 # Link the executable Wallpaper.exe
 
-build Wallpaper.exe: CXX_EXECUTABLE_LINKER__Wallpaper_Debug CMakeFiles/Wallpaper.dir/main.cpp.obj | _deps/fmt-build/libfmtd.a _deps/sfml-build/lib/libsfml-graphics-s-d.a _deps/sfml-build/lib/libsfml-window-s-d.a _deps/sfml-build/lib/libsfml-system-s-d.a _deps/sfml-build/lib/libfreetyped.a || _deps/fmt-build/libfmtd.a _deps/sfml-build/lib/libfreetyped.a _deps/sfml-build/lib/libsfml-graphics-s-d.a _deps/sfml-build/lib/libsfml-system-s-d.a _deps/sfml-build/lib/libsfml-window-s-d.a
+build Wallpaper.exe: CXX_EXECUTABLE_LINKER__Wallpaper_Debug CMakeFiles/Wallpaper.dir/main.cpp.obj CMakeFiles/Wallpaper.dir/Folder.cpp.obj CMakeFiles/Wallpaper.dir/DropTarget.cpp.obj | _deps/fmt-build/libfmtd.a _deps/sfml-build/lib/libsfml-graphics-s-d.a _deps/sfml-build/lib/libsfml-window-s-d.a _deps/sfml-build/lib/libsfml-system-s-d.a _deps/sfml-build/lib/libfreetyped.a || _deps/fmt-build/libfmtd.a _deps/sfml-build/lib/libfreetyped.a _deps/sfml-build/lib/libsfml-graphics-s-d.a _deps/sfml-build/lib/libsfml-system-s-d.a _deps/sfml-build/lib/libsfml-window-s-d.a
   FLAGS = -g
   LINK_LIBRARIES = _deps/fmt-build/libfmtd.a  _deps/sfml-build/lib/libsfml-graphics-s-d.a  -lshell32  _deps/sfml-build/lib/libsfml-window-s-d.a  _deps/sfml-build/lib/libsfml-system-s-d.a  -lopengl32  -lwinmm  -lgdi32  _deps/sfml-build/lib/libfreetyped.a  -lkernel32 -luser32 -lgdi32 -lwinspool -lshell32 -lole32 -loleaut32 -luuid -lcomdlg32 -ladvapi32
   OBJECT_DIR = CMakeFiles\Wallpaper.dir

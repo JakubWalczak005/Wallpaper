@@ -28,6 +28,6 @@ CMake Deprecation Warning at cmake-build-debug/_deps/vorbis-src/CMakeLists.txt:1
 
 
 -- Configuring vorbis 1.3.7
--- Configuring done (3.2s)
--- Generating done (0.1s)
+-- Configuring done (3.6s)
+-- Generating done (0.2s)
 -- Build files have been written to: D:/ProgrammingProjects/Wallpaper/cmake-build-debug

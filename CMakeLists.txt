@@ -19,6 +19,10 @@ FetchContent_Declare(
 
 
 FetchContent_MakeAvailable(fmt SFML)
-add_executable(Wallpaper main.cpp)
+add_executable(Wallpaper main.cpp
+        Folder.cpp
+        Folder.h
+        DropTarget.cpp
+        DropTarget.h)
 target_link_libraries(Wallpaper fmt::fmt SFML::Graphics shell32)
 target_compile_definitions(Wallpaper PRIVATE UNICODE _UNICODE)
