@@ -14,7 +14,8 @@ struct WindowData {
 
 void addTrayIcon(HWND trayHwnd);
 void removeTrayIcon(HWND trayHwnd);
-LRESULT CALLBACK customWndProc(HWND trayHwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+LRESULT CALLBACK trayWndProc(HWND trayHwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+LRESULT CALLBACK dragWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 bool IsWindowAbove(HWND hwnd1, HWND hwnd2);
 void leftClick(const sf::RenderWindow& window);
 
@@ -29,39 +30,14 @@ auto main() -> int {
     auto window = sf::RenderWindow(sf::VideoMode({7680, 1440}), "Wallpaper", sf::Style::None, sf::State::Windowed, sf::ContextSettings{.antiAliasingLevel = 8});
     window.setFramerateLimit(60);
     HWND hwnd = window.getNativeHandle();
-    SetWindowLongPtr(hwnd, GWL_STYLE, (GetWindowLongPtr(hwnd, GWL_STYLE) & ~WS_POPUP) | WS_CLIPCHILDREN);
-    SetWindowLongPtr(hwnd, GWL_EXSTYLE, GetWindowLongPtr(hwnd, GWL_EXSTYLE) | WS_EX_TOOLWINDOW | WS_EX_ACCEPTFILES);
+    SetWindowLongPtr(hwnd, GWL_STYLE, (GetWindowLongPtr(hwnd, GWL_STYLE) & ~WS_POPUP));
+    SetWindowLongPtr(hwnd, GWL_EXSTYLE, (GetWindowLongPtr(hwnd, GWL_EXSTYLE) & ~WS_POPUP) | WS_EX_TOOLWINDOW);
     SetWindowPos(hwnd, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_FRAMECHANGED);
-    fmt::println("{}", CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED));
-    auto dropTarget = new DropTarget(hwnd);
-    fmt::print("{}", RegisterDragDrop(hwnd, dropTarget));
 
-    /*HWND progman = FindWindow(TEXT("Progman"), nullptr);
-    SendMessageTimeout(progman, 0x052C, 0, 0, SMTO_NORMAL, 1000, nullptr);
-    HWND workerw = nullptr;
-    EnumWindows([](HWND topHandle, LPARAM lParam) -> BOOL {
-        HWND shellView = FindWindowEx(topHandle, nullptr, TEXT("SHELLDLL_DefView"), nullptr);
-        if (shellView != nullptr) {
-            HWND* out = reinterpret_cast<HWND*>(lParam);
-            *out = FindWindowEx(nullptr, topHandle, TEXT("WorkerW"), nullptr);
-            return FALSE;
-        }
-        return TRUE;
-    }, reinterpret_cast<LPARAM>(&workerw));
-    if (workerw != nullptr) {
-        SetWindowLong(hwnd, GWL_EXSTYLE, (GetWindowLong(hwnd, GWL_EXSTYLE) & ~WS_POPUP) | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE);
-        SetWindowPos(hwnd, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
-    }*/
-
-    //TRANSPARENT INPUT CATCHER
-    /*auto inputCatcher = sf::RenderWindow(sf::VideoMode({7680, 1440}), "Input Catcher", sf::Style::None, sf::State::Windowed);
-    HWND inputHwnd = inputCatcher.getNativeHandle();
-    SetWindowLong(inputHwnd, GWL_EXSTYLE, (GetWindowLong(inputHwnd, GWL_EXSTYLE) | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE));
-    SetWindowPos(inputHwnd, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);*/
 
     //TRANSPARENT TRAY WINDOW
     WNDCLASS wc = {};
-    wc.lpfnWndProc = customWndProc;
+    wc.lpfnWndProc = trayWndProc;
     wc.hInstance = GetModuleHandle(nullptr);
     wc.lpszClassName = TEXT("Tray");
     RegisterClass(&wc);
@@ -70,6 +46,25 @@ auto main() -> int {
     static WindowData windowData;
     windowData.window = &window;
     SetWindowLongPtr(trayHwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(&windowData));
+
+    //TRANSPARENT DRAG&DROP WINDOW
+    WNDCLASS wc2 = {};
+    wc2.lpfnWndProc = dragWndProc;
+    wc2.hInstance = GetModuleHandle(nullptr);
+    wc2.lpszClassName = TEXT("DragandDrop");
+    RegisterClass(&wc2);
+    HWND dragHwnd = CreateWindowEx(
+    0,
+    TEXT("DragandDrop"),
+    TEXT("HiddenDropWindow"),
+    WS_OVERLAPPEDWINDOW,
+    CW_USEDEFAULT, CW_USEDEFAULT, 300, 300,
+    nullptr, nullptr, GetModuleHandle(nullptr), nullptr
+);
+    ShowWindow(dragHwnd, SW_HIDE);
+    fmt::println("{}", OleInitialize(nullptr));
+    auto dropTarget = new DropTarget(dragHwnd);
+    fmt::print("{}", RegisterDragDrop(dragHwnd, dropTarget));
 
     //UTILITY
     MSG msg = {};
@@ -126,7 +121,7 @@ auto main() -> int {
 
     dropTarget->Release();
     RevokeDragDrop(hwnd);
-    CoUninitialize();
+    OleUninitialize();
 
 }
 
@@ -150,7 +145,7 @@ void removeTrayIcon(HWND trayHwnd) {
     Shell_NotifyIcon(NIM_DELETE, &nid);
 }
 
-LRESULT CALLBACK customWndProc(HWND trayHwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+LRESULT CALLBACK trayWndProc(HWND trayHwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     auto windowData = reinterpret_cast<WindowData*>(GetWindowLongPtr(trayHwnd, GWLP_USERDATA));
     switch (msg) {
         case WM_APP + 1:
@@ -176,6 +171,10 @@ LRESULT CALLBACK customWndProc(HWND trayHwnd, UINT msg, WPARAM wParam, LPARAM lP
         break;
     }
     return DefWindowProc(trayHwnd, msg, wParam, lParam);
+}
+
+LRESULT CALLBACK dragWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+    return DefWindowProc(hwnd, msg, wParam, lParam);
 }
 
 bool IsWindowAbove(HWND hwnd1, HWND hwnd2) {

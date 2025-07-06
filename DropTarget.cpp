@@ -5,6 +5,7 @@
 DropTarget::DropTarget(HWND hwnd) : usersAmount(1), hwnd(hwnd) {}
 
 HRESULT __stdcall DropTarget::QueryInterface(REFIID riid, void** ppvObject) {
+    fmt::println("test");
     if (!ppvObject) return E_POINTER;
 
     if (riid == IID_IUnknown || riid == IID_IDropTarget) {
@@ -18,10 +19,12 @@ HRESULT __stdcall DropTarget::QueryInterface(REFIID riid, void** ppvObject) {
 }
 
 ULONG __stdcall DropTarget::AddRef() {
+    fmt::println("add");
     return InterlockedIncrement(&usersAmount);
 }
 
 ULONG __stdcall DropTarget::Release() {
+    fmt::println("release");
     ULONG count = InterlockedDecrement(&usersAmount);
     if (count == 0)
         delete this;
@@ -29,16 +32,16 @@ ULONG __stdcall DropTarget::Release() {
 }
 
 HRESULT __stdcall DropTarget::DragEnter(IDataObject* pDataObj, DWORD grfKeyState, POINTL pt, DWORD* pdwEffect) {
-    fmt::println("test");
-    TCHAR path[MAX_PATH];
-    getFilePaths(pDataObj, path);
-    //*pdwEffect = DROPEFFECT_COPY; // Default accept copy
+    //fmt::println("test");
+    //TCHAR path[MAX_PATH];
+    //getFilePaths(pDataObj, path);
+    *pdwEffect = DROPEFFECT_COPY; // Default accept copy
     return S_OK;
 }
 
 HRESULT __stdcall DropTarget::DragOver(DWORD grfKeyState, POINTL pt, DWORD* pdwEffect) {
     // TODO: Add your drag over logic here
-    //*pdwEffect = DROPEFFECT_COPY;
+    *pdwEffect = DROPEFFECT_COPY;
     return S_OK;
 }
 
@@ -47,7 +50,7 @@ HRESULT __stdcall DropTarget::DragLeave() {
 }
 
 HRESULT __stdcall DropTarget::Drop(IDataObject* pDataObj, DWORD grfKeyState, POINTL pt, DWORD* pdwEffect) {
-    //*pdwEffect = DROPEFFECT_COPY;
+    *pdwEffect = DROPEFFECT_COPY;
     return S_OK;
 }
 
