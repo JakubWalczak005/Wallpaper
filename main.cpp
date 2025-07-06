@@ -5,6 +5,8 @@
 #include <fmt/format.h>
 #include <shlobj.h>
 #include "Folder.h"
+#include "DropTarget.h"
+#include <Ole2.h>
 
 struct WindowData {
     sf::RenderWindow* window;
@@ -27,9 +29,12 @@ auto main() -> int {
     auto window = sf::RenderWindow(sf::VideoMode({7680, 1440}), "Wallpaper", sf::Style::None, sf::State::Windowed, sf::ContextSettings{.antiAliasingLevel = 8});
     window.setFramerateLimit(60);
     HWND hwnd = window.getNativeHandle();
-    RegisterDragDrop(hwnd, pDropTarget);
-    SetWindowLong(hwnd, GWL_EXSTYLE, (GetWindowLong(hwnd, GWL_STYLE) & ~WS_POPUP) | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE);
-    SetWindowPos(hwnd, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+    SetWindowLongPtr(hwnd, GWL_STYLE, (GetWindowLongPtr(hwnd, GWL_STYLE) & ~WS_POPUP) | WS_CLIPCHILDREN);
+    SetWindowLongPtr(hwnd, GWL_EXSTYLE, GetWindowLongPtr(hwnd, GWL_EXSTYLE) | WS_EX_TOOLWINDOW | WS_EX_ACCEPTFILES);
+    SetWindowPos(hwnd, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_FRAMECHANGED);
+    fmt::println("{}", CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED));
+    auto dropTarget = new DropTarget(hwnd);
+    fmt::print("{}", RegisterDragDrop(hwnd, dropTarget));
 
     /*HWND progman = FindWindow(TEXT("Progman"), nullptr);
     SendMessageTimeout(progman, 0x052C, 0, 0, SMTO_NORMAL, 1000, nullptr);
@@ -44,14 +49,14 @@ auto main() -> int {
         return TRUE;
     }, reinterpret_cast<LPARAM>(&workerw));
     if (workerw != nullptr) {
-        SetWindowLong(hwnd, GWL_EXSTYLE, (GetWindowLong(hwnd, GWL_STYLE) & ~WS_POPUP) | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE);
+        SetWindowLong(hwnd, GWL_EXSTYLE, (GetWindowLong(hwnd, GWL_EXSTYLE) & ~WS_POPUP) | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE);
         SetWindowPos(hwnd, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
     }*/
 
     //TRANSPARENT INPUT CATCHER
     /*auto inputCatcher = sf::RenderWindow(sf::VideoMode({7680, 1440}), "Input Catcher", sf::Style::None, sf::State::Windowed);
     HWND inputHwnd = inputCatcher.getNativeHandle();
-    SetWindowLong(inputHwnd, GWL_EXSTYLE, (GetWindowLong(inputHwnd, GWL_STYLE) | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE));
+    SetWindowLong(inputHwnd, GWL_EXSTYLE, (GetWindowLong(inputHwnd, GWL_EXSTYLE) | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE));
     SetWindowPos(inputHwnd, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);*/
 
     //TRANSPARENT TRAY WINDOW
@@ -119,6 +124,10 @@ auto main() -> int {
 
     }
 
+    dropTarget->Release();
+    RevokeDragDrop(hwnd);
+    CoUninitialize();
+
 }
 
 void addTrayIcon(HWND trayHwnd) {
@@ -184,7 +193,6 @@ void leftClick(const sf::RenderWindow& window) {
         if (folder->customBounds().contains(static_cast<sf::Vector2f>(sf::Mouse::getPosition(window))))
             ShellExecute(nullptr, TEXT("open"), folder->path.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
 }
-
 
 void createWindow() {
     auto window = sf::RenderWindow(sf::VideoMode({1000, 1000}), "Wallpaper", sf::Style::None, sf::State::Windowed, sf::ContextSettings{.antiAliasingLevel = 8});

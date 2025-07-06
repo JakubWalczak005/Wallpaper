@@ -24,5 +24,5 @@ add_executable(Wallpaper main.cpp
         Folder.h
         DropTarget.cpp
         DropTarget.h)
-target_link_libraries(Wallpaper fmt::fmt SFML::Graphics shell32)
+target_link_libraries(Wallpaper fmt::fmt SFML::Graphics shell32 Ole32)
 target_compile_definitions(Wallpaper PRIVATE UNICODE _UNICODE)

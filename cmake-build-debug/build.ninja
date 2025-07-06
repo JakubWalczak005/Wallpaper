@@ -83,7 +83,7 @@ build CMakeFiles/Wallpaper.dir/DropTarget.cpp.obj: CXX_COMPILER__Wallpaper_unsca
 
 build Wallpaper.exe: CXX_EXECUTABLE_LINKER__Wallpaper_Debug CMakeFiles/Wallpaper.dir/main.cpp.obj CMakeFiles/Wallpaper.dir/Folder.cpp.obj CMakeFiles/Wallpaper.dir/DropTarget.cpp.obj | _deps/fmt-build/libfmtd.a _deps/sfml-build/lib/libsfml-graphics-s-d.a _deps/sfml-build/lib/libsfml-window-s-d.a _deps/sfml-build/lib/libsfml-system-s-d.a _deps/sfml-build/lib/libfreetyped.a || _deps/fmt-build/libfmtd.a _deps/sfml-build/lib/libfreetyped.a _deps/sfml-build/lib/libsfml-graphics-s-d.a _deps/sfml-build/lib/libsfml-system-s-d.a _deps/sfml-build/lib/libsfml-window-s-d.a
   FLAGS = -g
-  LINK_LIBRARIES = _deps/fmt-build/libfmtd.a  _deps/sfml-build/lib/libsfml-graphics-s-d.a  -lshell32  _deps/sfml-build/lib/libsfml-window-s-d.a  _deps/sfml-build/lib/libsfml-system-s-d.a  -lopengl32  -lwinmm  -lgdi32  _deps/sfml-build/lib/libfreetyped.a  -lkernel32 -luser32 -lgdi32 -lwinspool -lshell32 -lole32 -loleaut32 -luuid -lcomdlg32 -ladvapi32
+  LINK_LIBRARIES = _deps/fmt-build/libfmtd.a  _deps/sfml-build/lib/libsfml-graphics-s-d.a  -lshell32  -lOle32  _deps/sfml-build/lib/libsfml-window-s-d.a  _deps/sfml-build/lib/libsfml-system-s-d.a  -lopengl32  -lwinmm  -lgdi32  _deps/sfml-build/lib/libfreetyped.a  -lkernel32 -luser32 -lgdi32 -lwinspool -lshell32 -lole32 -loleaut32 -luuid -lcomdlg32 -ladvapi32
   OBJECT_DIR = CMakeFiles\Wallpaper.dir
   POST_BUILD = cd .
   PRE_LINK = cd .
