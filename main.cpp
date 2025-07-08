@@ -6,18 +6,21 @@
 #include <shlobj.h>
 #include "Folder.h"
 #include "DropTarget.h"
-#include <Ole2.h>
 
 struct WindowData {
-    sf::RenderWindow* window;
+    sf::RenderWindow* window; //unused
+    bool run = true;
 };
 
 void addTrayIcon(HWND trayHwnd);
 void removeTrayIcon(HWND trayHwnd);
-LRESULT CALLBACK customWndProc(HWND trayHwnd, UINT msg, WPARAM wParam, LPARAM lParam);
-bool IsWindowAbove(HWND hwnd1, HWND hwnd2);
-void leftClick(const sf::RenderWindow& window);
+LRESULT CALLBACK trayWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+LRESULT CALLBACK mainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+HBITMAP CreateDIBFromSFML(const uint8_t* sfmlPixels, int width, int height);
+bool isWindowAbove(HWND hwnd1, HWND hwnd2);
+void leftClick(const HWND& hwnd, std::wstring& newWindowPath);
 
+auto windowVec = std::vector<std::unique_ptr<sf::RenderWindow>>();
 auto folderVec = std::vector<std::unique_ptr<Custom::Folder>>();
 
 auto main() -> int {
@@ -25,19 +28,14 @@ auto main() -> int {
     //TEXTURES
     auto placeholder100 = sf::Texture("..\\Files\\Placeholders\\placeholder100.png");
 
-    //WINDOW
-    auto window = sf::RenderWindow(sf::VideoMode({7680, 1440}), "Wallpaper", sf::Style::None, sf::State::Windowed, sf::ContextSettings{.antiAliasingLevel = 8});
-    window.setFramerateLimit(60);
-    HWND hwnd = window.getNativeHandle();
-    SetWindowLongPtr(hwnd, GWL_STYLE, (GetWindowLongPtr(hwnd, GWL_STYLE) & ~WS_POPUP) | WS_CLIPCHILDREN);
-    SetWindowLongPtr(hwnd, GWL_EXSTYLE, GetWindowLongPtr(hwnd, GWL_EXSTYLE) | WS_EX_TOOLWINDOW | WS_EX_ACCEPTFILES);
-    SetWindowPos(hwnd, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_FRAMECHANGED);
-    fmt::println("{}", CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED));
+    /*fmt::println("{}", OleInitialize(nullptr));
     auto dropTarget = new DropTarget(hwnd);
     fmt::print("{}", RegisterDragDrop(hwnd, dropTarget));
+    dropTarget->Release();*/
 
-    /*HWND progman = FindWindow(TEXT("Progman"), nullptr);
+    HWND progman = FindWindow(TEXT("Progman"), nullptr);
     SendMessageTimeout(progman, 0x052C, 0, 0, SMTO_NORMAL, 1000, nullptr);
+
     HWND workerw = nullptr;
     EnumWindows([](HWND topHandle, LPARAM lParam) -> BOOL {
         HWND shellView = FindWindowEx(topHandle, nullptr, TEXT("SHELLDLL_DefView"), nullptr);
@@ -48,27 +46,50 @@ auto main() -> int {
         }
         return TRUE;
     }, reinterpret_cast<LPARAM>(&workerw));
-    if (workerw != nullptr) {
-        SetWindowLong(hwnd, GWL_EXSTYLE, (GetWindowLong(hwnd, GWL_EXSTYLE) & ~WS_POPUP) | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE);
-        SetWindowPos(hwnd, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+
+    /*if (workerw != nullptr) {
+        SetParent(hwnd, progman);
+        LONG style = GetWindowLong(hwnd, GWL_STYLE);
+        SetWindowLong(hwnd, GWL_STYLE, (style & ~WS_POPUP) | WS_CHILD);
     }*/
 
+    //WINDOW
+    auto mainWindow = std::make_unique<sf::RenderWindow>(sf::VideoMode({7680, 1440}), "Wallpaper", sf::Style::None, sf::State::Windowed);
+    mainWindow->setFramerateLimit(60);
+    HWND hwnd = mainWindow->getNativeHandle();
+    SetWindowLongPtr(hwnd, GWL_STYLE, (GetWindowLongPtr(hwnd, GWL_STYLE) & ~WS_POPUP) | WS_CHILD);
+    SetWindowLongPtr(hwnd, GWL_EXSTYLE, GetWindowLongPtr(hwnd, GWL_EXSTYLE) | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE);
+    SetWindowPos(hwnd, workerw, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+    SetParent(hwnd, workerw);
+    SetWindowPos(hwnd, nullptr, 0, 0, 7680, 1440, SWP_NOZORDER | SWP_SHOWWINDOW);
+
+    {
+        WNDCLASS wc = {};
+        wc.lpfnWndProc = mainWndProc;
+        wc.hInstance = GetModuleHandle(nullptr);
+        wc.lpszClassName = TEXT("Main");
+        RegisterClass(&wc);
+    }
+    HWND mainHwnd = CreateWindowEx(0,TEXT("Main"), nullptr, WS_CHILD | WS_VISIBLE, 0, 0, 7680, 1440, workerw, nullptr, GetModuleHandle(nullptr),nullptr);
+    auto renderTexture = sf::RenderTexture({7680, 1440}); //potential problem with antialiasing
+
     //TRANSPARENT INPUT CATCHER
-    /*auto inputCatcher = sf::RenderWindow(sf::VideoMode({7680, 1440}), "Input Catcher", sf::Style::None, sf::State::Windowed);
+    auto inputCatcher = sf::RenderWindow(sf::VideoMode({7680, 1440}), "Input Catcher", sf::Style::None, sf::State::Windowed);
     HWND inputHwnd = inputCatcher.getNativeHandle();
-    SetWindowLong(inputHwnd, GWL_EXSTYLE, (GetWindowLong(inputHwnd, GWL_EXSTYLE) | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE));
-    SetWindowPos(inputHwnd, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);*/
+    SetWindowLong(inputHwnd, GWL_EXSTYLE, (GetWindowLong(inputHwnd, GWL_STYLE) | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE));
+    SetWindowPos(inputHwnd, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
 
     //TRANSPARENT TRAY WINDOW
-    WNDCLASS wc = {};
-    wc.lpfnWndProc = customWndProc;
-    wc.hInstance = GetModuleHandle(nullptr);
-    wc.lpszClassName = TEXT("Tray");
-    RegisterClass(&wc);
+    {
+        WNDCLASS wc = {};
+        wc.lpfnWndProc = trayWndProc;
+        wc.hInstance = GetModuleHandle(nullptr);
+        wc.lpszClassName = TEXT("Tray");
+        RegisterClass(&wc);
+    }
     HWND trayHwnd = CreateWindowEx(0, TEXT("Tray"), nullptr, 0, 0, 0, 0, 0, HWND_MESSAGE, nullptr, GetModuleHandle(nullptr), nullptr);
     addTrayIcon(trayHwnd);
     static WindowData windowData;
-    windowData.window = &window;
     SetWindowLongPtr(trayHwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(&windowData));
 
     //UTILITY
@@ -77,30 +98,88 @@ auto main() -> int {
     auto text = sf::Text(font);
     text.setPosition({100, 100});
     text.setString("hello world");
+    auto fps = sf::Text(font);
+    fps.setPosition({200, 100});
+    auto deltaTime = sf::Clock();
+    auto timeScale = 0.f;
 
     //SPAWN
-    folderVec.push_back(std::make_unique<Custom::Folder>(Custom::Folder({1000, 1000}, placeholder100, std::string("D:"))));
+    auto newWindowPath = std::wstring();
+    //windowVec.push_back(std::move(mainWindow));
+    folderVec.push_back(std::make_unique<Custom::Folder>(sf::Vector2f(1000, 1000), placeholder100, std::string("D:")));
 
-    while (window.isOpen()) {
+    while (windowData.run) {
 
-        HWND taskbarHwnd = FindWindow(TEXT("Shell_TrayWnd"), nullptr);
-        if (IsWindowAbove(hwnd, taskbarHwnd))
-            SetWindowPos(hwnd, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+        timeScale = 60 * deltaTime.restart().asSeconds();
+
+        /*auto file = std::ofstream("..\\Files\\Save\\Save.txt");
+        file.close();
+        file = std::ofstream("..\\Files\\Save\\Save.txt", std::ios::app);
+        if (file)
+            for (auto& saveElement : saveState)
+                file << saveElement << " ";*/
+
+        /*HWND taskbarHwnd = FindWindow(TEXT("Shell_TrayWnd"), nullptr);
+        if (isWindowAbove(mainHwnd, taskbarHwnd))
+            SetWindowPos(mainHwnd, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);*/
 
         while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
             TranslateMessage(&msg);
             DispatchMessage(&msg);
         }
 
-        while (auto event = window.pollEvent()) {
+        for (auto& window : windowVec) {
+            while (auto event = window->pollEvent()) {
+
+                if (auto mouseClickEvent = event->getIf<sf::Event::MouseButtonPressed>()) {
+                    switch (mouseClickEvent->button) {
+                        case sf::Mouse::Button::Left: {
+                            auto mousePos = sf::Mouse::getPosition(*window);
+                            text.setString(fmt::format("{} {}", mousePos.x, mousePos.y));
+                            leftClick(mainHwnd, newWindowPath);
+                            //SetWindowPos(hwnd, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+                            break;
+                        }
+                        case sf::Mouse::Button::Right: {
+                        }
+                    }
+                }
+                if (auto keyEvent = event->getIf<sf::Event::KeyPressed>()) {
+                    switch (keyEvent->code) {
+                        case sf::Keyboard::Key::W: fmt::print("works");
+                    }
+                }
+
+            }
+        }
+
+        for (auto& window : windowVec) {
+            window->clear(sf::Color::Black);
+            window->draw(text);
+            for (auto& folder : folderVec)
+                window->draw(folder->sprite);
+            window->display();
+        }
+
+        if (!newWindowPath.empty()) {
+            windowVec.push_back(std::make_unique<sf::RenderWindow>(sf::VideoMode({1000, 1000}), "Folder", sf::Style::Default, sf::State::Windowed, sf::ContextSettings{.antiAliasingLevel = 8}));
+            SetClassLongPtr(windowVec.back()->getNativeHandle(), GCLP_HBRBACKGROUND, reinterpret_cast<LONG_PTR>(GetStockObject(NULL_BRUSH)));
+            SetWindowLongPtr(windowVec.back()->getNativeHandle(), GWL_EXSTYLE, GetWindowLongPtr(windowVec.back()->getNativeHandle(), GWL_EXSTYLE) | WS_EX_TOOLWINDOW);
+            SetWindowPos(windowVec.back()->getNativeHandle(), HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_NOREDRAW);
+            newWindowPath.clear();
+        }
+
+        while (auto event = inputCatcher.pollEvent()) {
 
             if (auto mouseClickEvent = event->getIf<sf::Event::MouseButtonPressed>()) {
                 switch (mouseClickEvent->button) {
                     case sf::Mouse::Button::Left: {
-                        auto mousePos = sf::Mouse::getPosition(window);
+                        POINT mousePos;
+                        GetCursorPos(&mousePos);
+                        ScreenToClient(mainHwnd, &mousePos);
                         text.setString(fmt::format("{} {}", mousePos.x, mousePos.y));
-                        leftClick(window);
-                    break;
+                        leftClick(mainHwnd, newWindowPath);
+                        break;
                     }
                     case sf::Mouse::Button::Right: {
                     }
@@ -114,19 +193,34 @@ auto main() -> int {
 
         }
 
-
-
-        window.clear(sf::Color::Black);
-        window.draw(text);
+        renderTexture.clear(sf::Color::Black);
+        renderTexture.draw(text);
         for (auto& folder : folderVec)
-            window.draw(folder->sprite);
-        window.display();
+            renderTexture.draw(folder->sprite);
+        renderTexture.display();
+
+        mainWindow->clear(sf::Color::Black);
+        mainWindow->draw(fps);
+        sf::Sprite sprite(renderTexture.getTexture());
+        mainWindow->draw(sprite);
+        mainWindow->display();
+
+        /*auto image = renderTexture.getTexture().copyToImage();
+        auto oldBmp = reinterpret_cast<HBITMAP>(GetWindowLongPtr(mainHwnd, GWLP_USERDATA));
+        if (oldBmp)
+            DeleteObject(oldBmp);
+        SetWindowLongPtr(mainHwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(CreateDIBFromSFML(image.getPixelsPtr(), image.getSize().x, image.getSize().y)));
+        InvalidateRect(mainHwnd, nullptr, FALSE);*/
+
+        fps.setString(std::to_string(static_cast<int>(60 / timeScale)));
 
     }
 
-    dropTarget->Release();
-    RevokeDragDrop(hwnd);
-    CoUninitialize();
+
+    RevokeDragDrop(mainHwnd);
+    OleUninitialize();
+    for (auto& window : windowVec)
+        window->close();
 
 }
 
@@ -150,8 +244,8 @@ void removeTrayIcon(HWND trayHwnd) {
     Shell_NotifyIcon(NIM_DELETE, &nid);
 }
 
-LRESULT CALLBACK customWndProc(HWND trayHwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
-    auto windowData = reinterpret_cast<WindowData*>(GetWindowLongPtr(trayHwnd, GWLP_USERDATA));
+LRESULT CALLBACK trayWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+    auto windowData = reinterpret_cast<WindowData*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
     switch (msg) {
         case WM_APP + 1:
             switch (lParam) {
@@ -160,25 +254,64 @@ LRESULT CALLBACK customWndProc(HWND trayHwnd, UINT msg, WPARAM wParam, LPARAM lP
                     GetCursorPos(&pt);
                     HMENU hMenu = CreatePopupMenu();
                     AppendMenu(hMenu, MF_STRING, 1001, TEXT("Exit"));
-                    TrackPopupMenu(hMenu, TPM_BOTTOMALIGN | TPM_LEFTALIGN, pt.x, pt.y, 0, trayHwnd, nullptr);
+                    TrackPopupMenu(hMenu, TPM_BOTTOMALIGN | TPM_LEFTALIGN, pt.x, pt.y, 0, hwnd, nullptr);
                     DestroyMenu(hMenu);
                 }
             }
         break;
         case WM_COMMAND:
             if (LOWORD(wParam) == 1001) {
-                windowData->window->clear(sf::Color::Black);
-                windowData->window->display();
-                windowData->window->close();
-                removeTrayIcon(trayHwnd);
+                removeTrayIcon(hwnd);
                 PostQuitMessage(0);
+                //windowData->run = false;
             }
         break;
     }
-    return DefWindowProc(trayHwnd, msg, wParam, lParam);
+    return DefWindowProc(hwnd, msg, wParam, lParam);
 }
 
-bool IsWindowAbove(HWND hwnd1, HWND hwnd2) {
+LRESULT CALLBACK mainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+    switch (msg) {
+        case WM_PAINT:
+            auto hBmp = reinterpret_cast<HBITMAP>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
+            if (hBmp) {
+                PAINTSTRUCT ps;
+                HDC hdc = BeginPaint(hwnd, &ps);
+                HDC memDC = CreateCompatibleDC(hdc);
+                HGDIOBJ old = SelectObject(memDC, hBmp);
+                BitBlt(hdc, 0, 0, 7680, 1440, memDC, 0, 0, SRCCOPY);
+                SelectObject(memDC, old);
+                DeleteDC(memDC);
+                EndPaint(hwnd, &ps);
+            }
+            break;
+    }
+    return DefWindowProc(hwnd, msg, wParam, lParam);
+}
+
+HBITMAP CreateDIBFromSFML(const uint8_t* sfmlPixels, int width, int height) {
+    BITMAPINFO bmi = {};
+    bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+    bmi.bmiHeader.biWidth = width;
+    bmi.bmiHeader.biHeight = -height;  // top-down
+    bmi.bmiHeader.biPlanes = 1;
+    bmi.bmiHeader.biBitCount = 32;
+    bmi.bmiHeader.biCompression = BI_RGB;
+
+    void* pvBits = nullptr;
+    HBITMAP hBitmap = CreateDIBSection(nullptr, &bmi, DIB_RGB_COLORS, &pvBits, nullptr, 0);
+
+    for (int i = 0; i < width * height; ++i) {
+        static_cast<BYTE *>(pvBits)[i * 4 + 0] = sfmlPixels[i * 4 + 2];
+        static_cast<BYTE *>(pvBits)[i * 4 + 1] = sfmlPixels[i * 4 + 1];
+        static_cast<BYTE *>(pvBits)[i * 4 + 2] = sfmlPixels[i * 4 + 0];
+        static_cast<BYTE *>(pvBits)[i * 4 + 3] = sfmlPixels[i * 4 + 3];
+    }
+
+    return hBitmap;
+}
+
+bool isWindowAbove(HWND hwnd1, HWND hwnd2) {
     HWND hwnd = GetTopWindow(nullptr);
     while (hwnd) {
         if (hwnd == hwnd1) return true;
@@ -188,13 +321,13 @@ bool IsWindowAbove(HWND hwnd1, HWND hwnd2) {
     return false;
 }
 
-void leftClick(const sf::RenderWindow& window) {
+void leftClick(const HWND& hwnd, std::wstring& newWindowPath) {
+    POINT mousePos;
+    GetCursorPos(&mousePos);
+    ScreenToClient(hwnd, &mousePos);
     for (auto& folder : folderVec)
-        if (folder->customBounds().contains(static_cast<sf::Vector2f>(sf::Mouse::getPosition(window))))
-            ShellExecute(nullptr, TEXT("open"), folder->path.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
-}
-
-void createWindow() {
-    auto window = sf::RenderWindow(sf::VideoMode({1000, 1000}), "Wallpaper", sf::Style::None, sf::State::Windowed, sf::ContextSettings{.antiAliasingLevel = 8});
-
+        if (folder->customBounds().contains({static_cast<float>(mousePos.x), static_cast<float>(mousePos.y)})) {
+            newWindowPath = folder->path;
+        }
+            //ShellExecute(nullptr, TEXT("open"), folder->path.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
 }
