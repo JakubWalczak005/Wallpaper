@@ -16,9 +16,9 @@ void addTrayIcon(HWND trayHwnd);
 void removeTrayIcon(HWND trayHwnd);
 LRESULT CALLBACK trayWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK mainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
-HBITMAP CreateDIBFromSFML(const uint8_t* sfmlPixels, int width, int height);
 bool isWindowAbove(HWND hwnd1, HWND hwnd2);
 void leftClick(const HWND& hwnd, std::wstring& newWindowPath);
+HBITMAP CreateDIBFromSFML(const uint8_t* sfmlPixels, int width, int height);
 
 auto windowVec = std::vector<std::unique_ptr<sf::RenderWindow>>();
 auto folderVec = std::vector<std::unique_ptr<Custom::Folder>>();
@@ -28,6 +28,14 @@ auto main() -> int {
     //TEXTURES
     auto placeholder100 = sf::Texture("..\\Files\\Placeholders\\placeholder100.png");
 
+    //WINDOW
+    auto mainWindow = std::make_unique<sf::RenderWindow>(sf::VideoMode({7680, 1440}), "Wallpaper", sf::Style::None, sf::State::Windowed, sf::ContextSettings{.antiAliasingLevel = 8});
+    mainWindow->setFramerateLimit(60);
+    HWND hwnd = mainWindow->getNativeHandle();
+    SetClassLongPtr(hwnd, GCLP_HBRBACKGROUND, reinterpret_cast<LONG_PTR>(GetStockObject(NULL_BRUSH)));
+    SetWindowLongPtr(hwnd, GWL_STYLE, (GetWindowLongPtr(hwnd, GWL_STYLE) & ~WS_POPUP));
+    SetWindowLongPtr(hwnd, GWL_EXSTYLE, GetWindowLongPtr(hwnd, GWL_EXSTYLE) | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE);
+    SetWindowPos(hwnd, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
     /*fmt::println("{}", OleInitialize(nullptr));
     auto dropTarget = new DropTarget(hwnd);
     fmt::print("{}", RegisterDragDrop(hwnd, dropTarget));
@@ -53,16 +61,6 @@ auto main() -> int {
         SetWindowLong(hwnd, GWL_STYLE, (style & ~WS_POPUP) | WS_CHILD);
     }*/
 
-    //WINDOW
-    auto mainWindow = std::make_unique<sf::RenderWindow>(sf::VideoMode({7680, 1440}), "Wallpaper", sf::Style::None, sf::State::Windowed);
-    mainWindow->setFramerateLimit(60);
-    HWND hwnd = mainWindow->getNativeHandle();
-    SetWindowLongPtr(hwnd, GWL_STYLE, (GetWindowLongPtr(hwnd, GWL_STYLE) & ~WS_POPUP) | WS_CHILD);
-    SetWindowLongPtr(hwnd, GWL_EXSTYLE, GetWindowLongPtr(hwnd, GWL_EXSTYLE) | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE);
-    SetWindowPos(hwnd, workerw, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
-    SetParent(hwnd, workerw);
-    SetWindowPos(hwnd, nullptr, 0, 0, 7680, 1440, SWP_NOZORDER | SWP_SHOWWINDOW);
-
     {
         WNDCLASS wc = {};
         wc.lpfnWndProc = mainWndProc;
@@ -70,14 +68,14 @@ auto main() -> int {
         wc.lpszClassName = TEXT("Main");
         RegisterClass(&wc);
     }
-    HWND mainHwnd = CreateWindowEx(0,TEXT("Main"), nullptr, WS_CHILD | WS_VISIBLE, 0, 0, 7680, 1440, workerw, nullptr, GetModuleHandle(nullptr),nullptr);
+    //HWND mainHwnd = CreateWindowEx(0,TEXT("Main"), nullptr, WS_CHILD | WS_VISIBLE, 0, 0, 7680, 1440, workerw, nullptr, GetModuleHandle(nullptr),nullptr);
     auto renderTexture = sf::RenderTexture({7680, 1440}); //potential problem with antialiasing
 
     //TRANSPARENT INPUT CATCHER
-    auto inputCatcher = sf::RenderWindow(sf::VideoMode({7680, 1440}), "Input Catcher", sf::Style::None, sf::State::Windowed);
+    /*auto inputCatcher = sf::RenderWindow(sf::VideoMode({7680, 1440}), "Input Catcher", sf::Style::None, sf::State::Windowed);
     HWND inputHwnd = inputCatcher.getNativeHandle();
     SetWindowLong(inputHwnd, GWL_EXSTYLE, (GetWindowLong(inputHwnd, GWL_STYLE) | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE));
-    SetWindowPos(inputHwnd, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+    SetWindowPos(inputHwnd, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);*/
 
     //TRANSPARENT TRAY WINDOW
     {
@@ -98,10 +96,6 @@ auto main() -> int {
     auto text = sf::Text(font);
     text.setPosition({100, 100});
     text.setString("hello world");
-    auto fps = sf::Text(font);
-    fps.setPosition({200, 100});
-    auto deltaTime = sf::Clock();
-    auto timeScale = 0.f;
 
     //SPAWN
     auto newWindowPath = std::wstring();
@@ -110,8 +104,6 @@ auto main() -> int {
 
     while (windowData.run) {
 
-        timeScale = 60 * deltaTime.restart().asSeconds();
-
         /*auto file = std::ofstream("..\\Files\\Save\\Save.txt");
         file.close();
         file = std::ofstream("..\\Files\\Save\\Save.txt", std::ios::app);
@@ -119,9 +111,9 @@ auto main() -> int {
             for (auto& saveElement : saveState)
                 file << saveElement << " ";*/
 
-        /*HWND taskbarHwnd = FindWindow(TEXT("Shell_TrayWnd"), nullptr);
-        if (isWindowAbove(mainHwnd, taskbarHwnd))
-            SetWindowPos(mainHwnd, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);*/
+        HWND taskbarHwnd = FindWindow(TEXT("Shell_TrayWnd"), nullptr);
+        if (isWindowAbove(hwnd, taskbarHwnd))
+            SetWindowPos(hwnd, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
 
         while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
             TranslateMessage(&msg);
@@ -136,7 +128,7 @@ auto main() -> int {
                         case sf::Mouse::Button::Left: {
                             auto mousePos = sf::Mouse::getPosition(*window);
                             text.setString(fmt::format("{} {}", mousePos.x, mousePos.y));
-                            leftClick(mainHwnd, newWindowPath);
+                            //leftClick(mainHwnd, newWindowPath);
                             //SetWindowPos(hwnd, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
                             break;
                         }
@@ -169,16 +161,17 @@ auto main() -> int {
             newWindowPath.clear();
         }
 
-        while (auto event = inputCatcher.pollEvent()) {
+        while (auto event = mainWindow->pollEvent()) {
 
             if (auto mouseClickEvent = event->getIf<sf::Event::MouseButtonPressed>()) {
                 switch (mouseClickEvent->button) {
                     case sf::Mouse::Button::Left: {
                         POINT mousePos;
                         GetCursorPos(&mousePos);
-                        ScreenToClient(mainHwnd, &mousePos);
+                        ScreenToClient(hwnd, &mousePos);
                         text.setString(fmt::format("{} {}", mousePos.x, mousePos.y));
-                        leftClick(mainHwnd, newWindowPath);
+                        leftClick(hwnd, newWindowPath);
+                        SetWindowPos(hwnd, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
                         break;
                     }
                     case sf::Mouse::Button::Right: {
@@ -199,12 +192,10 @@ auto main() -> int {
             renderTexture.draw(folder->sprite);
         renderTexture.display();
 
-        mainWindow->clear(sf::Color::Black);
-        mainWindow->draw(fps);
+        mainWindow->clear();
         sf::Sprite sprite(renderTexture.getTexture());
         mainWindow->draw(sprite);
         mainWindow->display();
-
         /*auto image = renderTexture.getTexture().copyToImage();
         auto oldBmp = reinterpret_cast<HBITMAP>(GetWindowLongPtr(mainHwnd, GWLP_USERDATA));
         if (oldBmp)
@@ -212,12 +203,10 @@ auto main() -> int {
         SetWindowLongPtr(mainHwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(CreateDIBFromSFML(image.getPixelsPtr(), image.getSize().x, image.getSize().y)));
         InvalidateRect(mainHwnd, nullptr, FALSE);*/
 
-        fps.setString(std::to_string(static_cast<int>(60 / timeScale)));
-
     }
 
 
-    RevokeDragDrop(mainHwnd);
+    RevokeDragDrop(hwnd);
     OleUninitialize();
     for (auto& window : windowVec)
         window->close();
@@ -302,10 +291,10 @@ HBITMAP CreateDIBFromSFML(const uint8_t* sfmlPixels, int width, int height) {
     HBITMAP hBitmap = CreateDIBSection(nullptr, &bmi, DIB_RGB_COLORS, &pvBits, nullptr, 0);
 
     for (int i = 0; i < width * height; ++i) {
-        static_cast<BYTE *>(pvBits)[i * 4 + 0] = sfmlPixels[i * 4 + 2];
-        static_cast<BYTE *>(pvBits)[i * 4 + 1] = sfmlPixels[i * 4 + 1];
-        static_cast<BYTE *>(pvBits)[i * 4 + 2] = sfmlPixels[i * 4 + 0];
-        static_cast<BYTE *>(pvBits)[i * 4 + 3] = sfmlPixels[i * 4 + 3];
+        ((BYTE*)pvBits)[i * 4 + 0] = sfmlPixels[i * 4 + 2]; // B
+        ((BYTE*)pvBits)[i * 4 + 1] = sfmlPixels[i * 4 + 1]; // G
+        ((BYTE*)pvBits)[i * 4 + 2] = sfmlPixels[i * 4 + 0]; // R
+        ((BYTE*)pvBits)[i * 4 + 3] = sfmlPixels[i * 4 + 3]; // A (if you want to keep it, else 255)
     }
 
     return hBitmap;
