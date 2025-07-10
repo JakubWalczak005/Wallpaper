@@ -17,8 +17,8 @@ struct WindowData {
 
 void addTrayIcon(HWND trayHwnd);
 void removeTrayIcon(HWND trayHwnd);
-LRESULT CALLBACK trayWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK mainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+LRESULT CALLBACK trayWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 bool isWindowAbove(HWND hwnd1, HWND hwnd2);
 
 constexpr auto WIDTH = 7680;
@@ -63,21 +63,26 @@ auto main() -> int {
     auto text = sf::Text(font);
     text.setPosition({100, 100});
     text.setString("hello world");
+    auto refresh = sf::Text(font);
+    refresh.setPosition({300, 100});
     auto fps = sf::Text(font);
     fps.setPosition({500, 100});
     auto deltaTime = sf::Clock();
     auto timeScale = 0.f;
+    auto refreshClock = sf::Clock();
+    auto refreshTimer = 0.f;
     auto fileExplorerManager = FileExplorerManager();
     auto folderVec = std::vector<std::unique_ptr<Custom::Folder>>();
-    auto newWindowPath = std::wstring();
 
     //SPAWN
-    folderVec.push_back(std::make_unique<Custom::Folder>(sf::Vector2f(1000, 1000), placeholder100, std::string("D:\\test"), font));
+    auto path = std::string("D:\\test");
+    folderVec.push_back(std::make_unique<Custom::Folder>(sf::Vector2f(1000, 1000), path));
 
     //MAIN LOOP
     while (windowData.run) {
 
         timeScale = 60 * deltaTime.restart().asSeconds();
+        refreshTimer += refreshClock.restart().asSeconds();
 
         /*auto file = std::ofstream("..\\Files\\Save\\Save.txt");
         file.close();
@@ -120,16 +125,34 @@ auto main() -> int {
 
         }
 
+        //CLEAR
         mainWindow.clear(sf::Color::Black);
 
+        //REFRESH INFO
+        if (refreshTimer > .5f) {
+            refreshTimer = 0;
+            for (auto& folder : folderVec)
+                folder->refresh();
+            for (auto& fileExplorer : fileExplorerManager.fileExplorerVec)
+                fileExplorer->refresh();
+        }
+
+        //DRAW SUBWINDOWS
         for (auto& folder : folderVec)
             folder->update(mainWindow);
-        for (auto& window : fileExplorerManager.fileExplorerVec)
-            window->update();
+        for (auto& fileExplorer : fileExplorerManager.fileExplorerVec)
+            fileExplorer->update(fileExplorerManager);
 
+        fileExplorerManager.updateFileExplorerVec();
+
+        //DRAW MAINWINDOW
+        fps.setString(std::to_string(static_cast<int>(60 / timeScale)));
+        refresh.setString(std::to_string(refreshTimer));
         mainWindow.draw(text);
         mainWindow.draw(fps);
-        fps.setString(std::to_string(static_cast<int>(60 / timeScale)));
+        mainWindow.draw(refresh);
+
+        //DISPLAY
         mainWindow.display();
 
     }
@@ -162,6 +185,12 @@ void removeTrayIcon(HWND trayHwnd) {
     Shell_NotifyIcon(NIM_DELETE, &nid);
 }
 
+LRESULT CALLBACK mainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+    if (msg == WM_MOUSEACTIVATE)
+        return MA_NOACTIVATE;
+    return CallWindowProc(g_originalWndProc, hwnd, msg, wParam, lParam);
+}
+
 LRESULT CALLBACK trayWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     auto windowData = reinterpret_cast<WindowData*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
     switch (msg) {
@@ -186,12 +215,6 @@ LRESULT CALLBACK trayWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) 
         break;
     }
     return DefWindowProc(hwnd, msg, wParam, lParam);
-}
-
-LRESULT CALLBACK mainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
-    if (msg == WM_MOUSEACTIVATE)
-        return MA_NOACTIVATE;
-    return CallWindowProc(g_originalWndProc, hwnd, msg, wParam, lParam);
 }
 
 bool isWindowAbove(HWND hwnd1, HWND hwnd2) {

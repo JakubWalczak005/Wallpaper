@@ -1,5 +1,8 @@
 #pragma once
-#include "FileExplorer.h"
+#include <vector>
+#include <memory>
+
+struct FileExplorer;
 
 struct FileExplorerManager {
 
