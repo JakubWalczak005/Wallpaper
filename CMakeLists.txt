@@ -23,6 +23,10 @@ add_executable(Wallpaper main.cpp
         Folder.cpp
         Folder.h
         DropTarget.cpp
-        DropTarget.h)
+        DropTarget.h
+        FileExplorerManager.cpp
+        FileExplorerManager.h
+        FileExplorer.cpp
+        FileExplorer.h)
 target_link_libraries(Wallpaper fmt::fmt SFML::Graphics shell32 Ole32)
 target_compile_definitions(Wallpaper PRIVATE UNICODE _UNICODE)

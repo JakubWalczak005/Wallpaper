@@ -29,7 +29,6 @@ ULONG __stdcall DropTarget::Release() {
 }
 
 HRESULT __stdcall DropTarget::DragEnter(IDataObject* pDataObj, DWORD grfKeyState, POINTL pt, DWORD* pdwEffect) {
-    fmt::println("test");
     TCHAR path[MAX_PATH];
     getFilePaths(pDataObj, path);
     //*pdwEffect = DROPEFFECT_COPY; // Default accept copy
@@ -37,7 +36,6 @@ HRESULT __stdcall DropTarget::DragEnter(IDataObject* pDataObj, DWORD grfKeyState
 }
 
 HRESULT __stdcall DropTarget::DragOver(DWORD grfKeyState, POINTL pt, DWORD* pdwEffect) {
-    // TODO: Add your drag over logic here
     //*pdwEffect = DROPEFFECT_COPY;
     return S_OK;
 }
@@ -77,7 +75,8 @@ bool DropTarget::getFilePaths(IDataObject* pDataObj, TCHAR* path) {
     for (auto i = 0; i < fileCount; ++i) {
         TCHAR filePath[MAX_PATH];
         if (DragQueryFile(hDrop, i, filePath, MAX_PATH)) {
-            wprintf(L"%s", filePath);
+            wprintf(TEXT("%s"), filePath);
+            fmt::println("{}", std::wcslen(filePath));
         }
     }
 
