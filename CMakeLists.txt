@@ -10,23 +10,26 @@ FetchContent_Declare(
         GIT_REPOSITORY https://github.com/fmtlib/fmt.git
         GIT_TAG 11.1.4
 )
-
 FetchContent_Declare(
         SFML
         GIT_REPOSITORY https://github.com/SFML/SFML.git
         GIT_TAG 3.0.0
 )
 
-
 FetchContent_MakeAvailable(fmt SFML)
 add_executable(Wallpaper main.cpp
-        Folder.cpp
-        Folder.h
+        FileExplorer/Folder.cpp
+        FileExplorer/Folder.h
         DropTarget.cpp
         DropTarget.h
         FileExplorerManager.cpp
         FileExplorerManager.h
-        FileExplorer.cpp
-        FileExplorer.h)
+        FileExplorer/FileExplorer.cpp
+        FileExplorer/FileExplorer.h
+        FileExplorer/Title.cpp
+        FileExplorer/Title.h
+        TextureManager.cpp
+        TextureManager.h
+        FileLayout.h)
 target_link_libraries(Wallpaper fmt::fmt SFML::Graphics shell32 Ole32)
 target_compile_definitions(Wallpaper PRIVATE UNICODE _UNICODE)

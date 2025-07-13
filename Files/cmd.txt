@@ -1,0 +1,1 @@
+texconv.exe -f BC7_UNORM -y -m 1 -o D:\ProgrammingProjects\Wallpaper\Files\BC7 D:\ProgrammingProjects\Wallpaper\Files\8k\*.png

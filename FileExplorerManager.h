@@ -7,7 +7,8 @@ struct FileExplorer;
 struct FileExplorerManager {
 
     std::vector<std::unique_ptr<FileExplorer>> fileExplorerVec;
-    std::vector<std::unique_ptr<FileExplorer>> fileExplorerVecBuffer;
+    std::vector<std::unique_ptr<FileExplorer>> fileExplorerVecAddBuffer;
+    std::vector<FileExplorer*> fileExplorerVecEraseBuffer;
 
     void updateFileExplorerVec();
 

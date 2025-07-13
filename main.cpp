@@ -4,14 +4,14 @@
 #include <fmt/base.h>
 #include <fmt/format.h>
 #include <shlobj.h>
-#include "Folder.h"
+#include "FileExplorer/Folder.h"
 #include "DropTarget.h"
 #include "FileExplorerManager.h"
-#include "FileExplorer.h"
+#include "FileExplorer/FileExplorer.h"
 #include <regex>
+#include <thread>
 
 struct WindowData {
-    sf::RenderWindow* window; //unused
     bool run = true;
 };
 
@@ -24,7 +24,19 @@ bool isWindowAbove(HWND hwnd1, HWND hwnd2);
 constexpr auto WIDTH = 7680;
 constexpr auto HEIGHT = 1440;
 
-WNDPROC g_originalWndProc = nullptr;
+WNDPROC defaultWndProc = nullptr;
+
+/*void func(const std::filesystem::path& path) {
+    auto tex = sf::Texture();
+    auto clock = sf::Clock();
+    vec.emplace_back(path);
+    fmt::println("{}", clock.getElapsedTime().asSeconds());
+    std::this_thread::sleep_for(std::chrono::seconds(10));
+}
+for (const auto& entry : std::filesystem::directory_iterator("D:\\ProgrammingProjects\\Wallpaper\\Files\\8k")) {
+    std::thread t(func, entry.path());
+    t.detach();
+}*/
 
 auto main() -> int {
 
@@ -35,7 +47,7 @@ auto main() -> int {
     auto mainWindow = sf::RenderWindow(sf::VideoMode({WIDTH, HEIGHT}), "Wallpaper", sf::Style::None, sf::State::Windowed);
     mainWindow.setFramerateLimit(240);
     HWND mainHwnd = mainWindow.getNativeHandle();
-    g_originalWndProc = reinterpret_cast<WNDPROC>(SetWindowLongPtr(mainHwnd, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(mainWndProc)));
+    defaultWndProc = reinterpret_cast<WNDPROC>(SetWindowLongPtr(mainHwnd, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(mainWndProc)));
     SetWindowLongPtr(mainHwnd, GWL_STYLE, (GetWindowLongPtr(mainHwnd, GWL_STYLE) & ~WS_POPUP));
     SetWindowLongPtr(mainHwnd, GWL_EXSTYLE, GetWindowLongPtr(mainHwnd, GWL_EXSTYLE) | WS_EX_TOOLWINDOW);
     SetWindowPos(mainHwnd, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
@@ -75,8 +87,7 @@ auto main() -> int {
     auto folderVec = std::vector<std::unique_ptr<Custom::Folder>>();
 
     //SPAWN
-    auto path = std::string("D:\\test");
-    folderVec.push_back(std::make_unique<Custom::Folder>(sf::Vector2f(1000, 1000), path));
+    folderVec.push_back(std::make_unique<Custom::Folder>(std::filesystem::path("D:\\test"), FileLayout::LargeIcons, sf::Vector2f(1000, 1000)));
 
     //MAIN LOOP
     while (windowData.run) {
@@ -108,7 +119,6 @@ auto main() -> int {
                         for (auto& folder : folderVec)
                             if (folder->customBounds().contains(static_cast<sf::Vector2f>(sf::Mouse::getPosition(mainWindow))))
                                 fileExplorerManager.fileExplorerVec.emplace_back(std::make_unique<FileExplorer>(FileExplorer(folder->absolutePath)));
-                        fmt::println("click main");
                         auto mousePos = sf::Mouse::getPosition(mainWindow);
                         text.setString(fmt::format("{} {}", mousePos.x, mousePos.y));
                         break;
@@ -119,7 +129,7 @@ auto main() -> int {
             }
             if (auto keyEvent = event->getIf<sf::Event::KeyPressed>()) {
                 switch (keyEvent->code) {
-                    case sf::Keyboard::Key::W: fmt::println("keyboard main");
+                    case sf::Keyboard::Key::W: break;
                 }
             }
 
@@ -131,8 +141,6 @@ auto main() -> int {
         //REFRESH INFO
         if (refreshTimer > .5f) {
             refreshTimer = 0;
-            for (auto& folder : folderVec)
-                folder->refresh();
             for (auto& fileExplorer : fileExplorerManager.fileExplorerVec)
                 fileExplorer->refresh();
         }
@@ -188,7 +196,7 @@ void removeTrayIcon(HWND trayHwnd) {
 LRESULT CALLBACK mainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     if (msg == WM_MOUSEACTIVATE)
         return MA_NOACTIVATE;
-    return CallWindowProc(g_originalWndProc, hwnd, msg, wParam, lParam);
+    return CallWindowProc(defaultWndProc, hwnd, msg, wParam, lParam);
 }
 
 LRESULT CALLBACK trayWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
